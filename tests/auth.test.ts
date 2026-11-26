@@ -61,7 +61,7 @@ describe("Auth helpers", () => {
     });
     const decoded = verifySessionToken(token);
     expect(decoded?.role).toBe("user");
-    expect(decoded?.userId).toBe("u-1");
+    expect(decoded && decoded.role === "user" ? decoded.userId : null).toBe("u-1");
 
     // Tampered token
     const [body, sig] = token.split(".");
