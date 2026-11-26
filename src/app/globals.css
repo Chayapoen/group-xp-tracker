@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #111111;
+  --muted-ink: #555555;
+  --old-rose: #b45a73;
+  --old-rose-border: #c06c84;
+  --old-rose-soft: #fdf2f5;
+  --old-rose-soft-border: #e7bac7;
+  --surface-border: #e6ddd2;
+}
+
+body {
+  color: var(--ink);
+  background: linear-gradient(135deg, #fff1e0 0%, #fffdf9 48%, #e7f7ec 100%);
+  min-height: 100vh;
+}
+
+.banner-gradient {
+  background: linear-gradient(125deg, #ffe4c4 0%, #fff7ee 50%, #d9f5e3 100%);
+}
+
+.brand-gradient {
+  background: linear-gradient(135deg, #f2944b 0%, #4fb275 100%);
+}
+
+.progress-gradient {
+  background: linear-gradient(90deg, #f2944b 0%, #4fb275 100%);
+}
+
+.category-header-gradient {
+  background: linear-gradient(90deg, #fff7ee 0%, #ffffff 55%, #f2fbf5 100%);
+}
+
+.text-old-rose {
+  color: var(--old-rose);
+}
+
+.bg-old-rose-soft {
+  background-color: var(--old-rose-soft);
+}
+
+.border-old-rose-soft {
+  border-color: var(--old-rose-soft-border);
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.pulse-dot {
+  animation: pulseDot 1.1s infinite ease-in-out;
+}
