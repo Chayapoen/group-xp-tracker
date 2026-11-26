@@ -137,7 +137,13 @@ begin
 end;
 $$;
 
--- 10. Storage Bucket for Evidence Photos
+-- 10. Grant privileges to service_role (required on newer Supabase projects)
+grant usage on schema public to service_role;
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant execute on function public.toggle_user_score(uuid, uuid, boolean, text, text, integer, text) to service_role;
+
+-- 11. Storage Bucket for Evidence Photos
 insert into storage.buckets (id, name, public)
 values ('evidence-photos', 'evidence-photos', true)
 on conflict (id) do nothing;
