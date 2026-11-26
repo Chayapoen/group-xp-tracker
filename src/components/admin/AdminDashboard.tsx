@@ -304,7 +304,12 @@ export function AdminDashboard() {
             lastUpdatedAt={lastUpdatedAt}
           />
         ) : activeTab === "history" ? (
-          <HistoryTab history={history} photos={photos} groups={groupOptions} />
+          <HistoryTab
+            history={history}
+            photos={photos}
+            groups={groupOptions}
+            onRefresh={() => loadAll(false)}
+          />
         ) : activeTab === "users" ? (
           <UsersTab users={users} onRefresh={() => loadAll(false)} />
         ) : activeTab === "categories" ? (
