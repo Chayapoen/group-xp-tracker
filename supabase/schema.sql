@@ -7,6 +7,7 @@ create extension if not exists "pgcrypto";
 create table if not exists public.app_settings (
   id integer primary key default 1 check (id = 1),
   project_name text not null default 'ระบบจดคะแนน',
+  leaderboard_visible boolean not null default true,
   updated_at timestamptz not null default now()
 );
 
@@ -77,6 +78,7 @@ create table if not exists public.evidence_photos (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.temp_users(id) on delete cascade,
   category_id uuid references public.score_categories(id) on delete set null,
+  issue_category text,
   title text not null,
   storage_path text not null,
   public_url text not null,

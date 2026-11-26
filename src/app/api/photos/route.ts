@@ -20,7 +20,7 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("evidence_photos")
-      .select("id, category_id, title, public_url, created_at, score_categories(title)")
+      .select("id, issue_category, title, public_url, created_at")
       .eq("user_id", session.userId)
       .order("created_at", { ascending: false });
 
@@ -44,8 +44,8 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file");
     const title = String(formData.get("title") ?? "").trim();
-    const categoryIdRaw = String(formData.get("categoryId") ?? "").trim();
-    const categoryId = categoryIdRaw || null;
+    const issueCategoryRaw = String(formData.get("issueCategory") ?? "").trim();
+    const issueCategory = issueCategoryRaw || null;
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -76,22 +76,6 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseAdmin();
-
-    // Validate optional categoryId upfront before uploading to Storage
-    if (categoryId) {
-      const { data: cat, error: catErr } = await supabase
-        .from("score_categories")
-        .select("id")
-        .eq("id", categoryId)
-        .maybeSingle();
-      if (catErr || !cat) {
-        return NextResponse.json(
-          { error: "ไม่พบหมวดคะแนนที่เลือก" },
-          { status: 400 }
-        );
-      }
-    }
-
     const storagePath = `${session.userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
@@ -115,12 +99,13 @@ export async function POST(request: Request) {
       .from("evidence_photos")
       .insert({
         user_id: session.userId,
-        category_id: categoryId,
+        category_id: null,
+        issue_category: issueCategory,
         title,
         storage_path: storagePath,
         public_url: pubData.publicUrl,
       })
-      .select("id, category_id, title, public_url, created_at, score_categories(title)")
+      .select("id, issue_category, title, public_url, created_at")
       .single();
 
     if (dbError) {

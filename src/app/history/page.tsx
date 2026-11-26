@@ -21,7 +21,11 @@ export default async function HistoryPage() {
 
   const supabase = getSupabaseAdmin();
   const [settingsRes, historyRes, photosCountRes] = await Promise.all([
-    supabase.from("app_settings").select("project_name").eq("id", 1).maybeSingle(),
+    supabase
+      .from("app_settings")
+      .select("project_name, leaderboard_visible")
+      .eq("id", 1)
+      .maybeSingle(),
     supabase
       .from("score_history")
       .select("id, category_title, item_title, xp, passed, changed_by, created_at")
@@ -48,6 +52,7 @@ export default async function HistoryPage() {
         active="history"
         photosCount={photosCountRes.count ?? 0}
         historyCount={history.length}
+        leaderboardVisible={settingsRes.data?.leaderboard_visible !== false}
       />
 
       <main className="mx-auto max-w-4xl space-y-4 px-4 py-5 sm:px-6">

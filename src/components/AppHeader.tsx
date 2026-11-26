@@ -12,6 +12,22 @@ interface AppHeaderProps {
   groupName: string;
 }
 
+const AVATAR_STYLES = [
+  "bg-[#FDF2F5] text-[#B45A73] border-[#E7BAC7]",
+  "bg-[#FFF3E0] text-[#C25E00] border-[#F6C89F]",
+  "bg-[#E8FCEF] text-[#15803D] border-[#9AE6B4]",
+  "bg-[#FEF3C7] text-[#B45309] border-[#FCD34D]",
+  "bg-[#FCE7F3] text-[#9D174D] border-[#F9A8D4]",
+  "bg-[#ECFCCB] text-[#3F6212] border-[#BEF264]",
+];
+
+function getUserAvatarInfo(username: string) {
+  const firstChar = Array.from(username.trim())[0]?.toUpperCase() || "?";
+  const code = firstChar.codePointAt(0) ?? 0;
+  const style = AVATAR_STYLES[code % AVATAR_STYLES.length];
+  return { firstChar, style };
+}
+
 export function AppHeader({
   projectName,
   saveStatus,
@@ -20,6 +36,7 @@ export function AppHeader({
 }: AppHeaderProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const avatar = getUserAvatarInfo(username);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -29,7 +46,7 @@ export function AppHeader({
 
   return (
     <header className="sticky top-0 z-30 border-b border-[#EAE1D7] bg-white/90 backdrop-blur">
-      <div className="mx-auto grid max-w-4xl grid-cols-3 items-center gap-2 px-4 py-3">
+      <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
         {/* Top-Left: Project Name */}
         <div className="flex min-w-0 items-center gap-2">
           <div className="brand-gradient flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-xs">
@@ -40,19 +57,20 @@ export function AppHeader({
           </span>
         </div>
 
-        {/* Top-Center: Save Status */}
-        <div className="flex justify-center">
+        {/* Top-Right: Save Status right before User Initial Icon */}
+        <div className="relative flex shrink-0 items-center gap-2">
           {saveStatus === "saving" ? (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#F5C596] bg-[#FFF4E6] px-3 py-1 text-xs font-semibold text-[#B45309]">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#F5C596] bg-[#FFF4E6] px-2.5 py-1 text-xs font-semibold text-[#B45309]">
               <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-[#F59E0B]" />
-              กำลังบันทึก...
+              <span>กำลังบันทึก...</span>
             </div>
           ) : saveStatus === "error" ? (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#F2B8B5] bg-[#FEF2F2] px-3 py-1 text-xs font-semibold text-[#B91C1C]">
-              <span>✕</span> บันทึกไม่สำเร็จ
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#F2B8B5] bg-[#FEF2F2] px-2.5 py-1 text-xs font-semibold text-[#B91C1C]">
+              <span>✕</span>
+              <span>บันทึกไม่สำเร็จ</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#A7E3BE] bg-[#ECFDF3] px-3 py-1 text-xs font-semibold text-[#166534]">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#A7E3BE] bg-[#ECFDF3] px-2.5 py-1 text-xs font-semibold text-[#166534]">
               <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path
                   fillRule="evenodd"
@@ -60,31 +78,20 @@ export function AppHeader({
                   clipRule="evenodd"
                 />
               </svg>
-              บันทึกแล้ว
+              <span>บันทึกแล้ว</span>
             </div>
           )}
-        </div>
 
-        {/* Top-Right: User Icon */}
-        <div className="relative flex justify-end">
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
             className="flex items-center gap-2 rounded-full border border-[#E5DDD3] bg-[#FFFDFB] p-1 pr-2.5 text-xs transition hover:border-[#C06C84]"
             aria-label="ข้อมูลผู้ใช้งาน"
           >
-            <span className="bg-old-rose-soft text-old-rose flex h-7 w-7 items-center justify-center rounded-full">
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
+            <span
+              className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs font-extrabold ${avatar.style}`}
+            >
+              {avatar.firstChar}
             </span>
             <span className="hidden font-semibold text-[#111111] sm:inline">
               {username}

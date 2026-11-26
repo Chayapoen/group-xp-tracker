@@ -8,6 +8,7 @@ import type { CategorySummary } from "@/lib/scoring";
 
 interface ScoringBoardProps {
   initialProjectName: string;
+  leaderboardVisible: boolean;
   user: {
     userId: string;
     username: string;
@@ -22,6 +23,7 @@ interface ScoringBoardProps {
 
 export function ScoringBoard({
   initialProjectName,
+  leaderboardVisible,
   user,
   initialCategories,
   initialCounts,
@@ -119,6 +121,7 @@ export function ScoringBoard({
         active="scoring"
         photosCount={initialCounts.photos}
         historyCount={historyCount}
+        leaderboardVisible={leaderboardVisible}
       />
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-5 sm:px-6">

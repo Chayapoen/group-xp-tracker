@@ -6,8 +6,7 @@ import { NavTabs } from "@/components/NavTabs";
 
 export interface PhotoView {
   id: string;
-  categoryId: string | null;
-  categoryTitle: string | null;
+  issueCategory: string | null;
   title: string;
   publicUrl: string;
   createdAt: string;
@@ -15,20 +14,20 @@ export interface PhotoView {
 
 interface PhotosManagerProps {
   projectName: string;
+  leaderboardVisible: boolean;
   user: {
     userId: string;
     username: string;
     groupName: string;
   };
-  categories: { id: string; title: string }[];
   initialPhotos: PhotoView[];
   historyCount: number;
 }
 
 export function PhotosManager({
   projectName,
+  leaderboardVisible,
   user,
-  categories,
   initialPhotos,
   historyCount,
 }: PhotosManagerProps) {
@@ -36,13 +35,30 @@ export function PhotosManager({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [title, setTitle] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [issueCategory, setIssueCategory] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+
+  // Unique user-created "หมวดประเด็น" derived from their own photos
+  const existingIssues = Array.from(
+    new Set(
+      photos
+        .map((p) => p.issueCategory?.trim())
+        .filter((v): v is string => Boolean(v))
+    )
+  );
+
+  const filteredPhotos =
+    filterCategory === "all"
+      ? photos
+      : filterCategory === "__none__"
+      ? photos.filter((p) => !p.issueCategory)
+      : photos.filter((p) => p.issueCategory === filterCategory);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selected = e.target.files?.[0] ?? null;
@@ -78,7 +94,9 @@ export function PhotosManager({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("title", title.trim());
-      if (categoryId) formData.append("categoryId", categoryId);
+      if (issueCategory.trim()) {
+        formData.append("issueCategory", issueCategory.trim());
+      }
 
       const res = await fetch("/api/photos", {
         method: "POST",
@@ -94,14 +112,9 @@ export function PhotosManager({
       }
 
       const raw = data.photo;
-      const catObj = Array.isArray(raw.score_categories)
-        ? raw.score_categories[0]
-        : raw.score_categories;
-
       const created: PhotoView = {
         id: raw.id,
-        categoryId: raw.category_id,
-        categoryTitle: catObj?.title ?? null,
+        issueCategory: raw.issue_category ?? null,
         title: raw.title,
         publicUrl: raw.public_url,
         createdAt: raw.created_at,
@@ -110,7 +123,6 @@ export function PhotosManager({
       setPhotos((prev) => [created, ...prev]);
       clearDraft();
       setTitle("");
-      setCategoryId("");
       setSaveStatus("saved");
     } catch (err) {
       setSaveStatus("error");
@@ -175,6 +187,7 @@ export function PhotosManager({
         active="photos"
         photosCount={photos.length}
         historyCount={historyCount}
+        leaderboardVisible={leaderboardVisible}
       />
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-5 sm:px-6">
@@ -182,8 +195,9 @@ export function PhotosManager({
           <div>
             <h1 className="text-base font-bold text-[#111111]">ถ่ายรูปแนบหลักฐาน</h1>
             <p className="text-xs text-[#555555]">
-              แนบรูปประกอบการให้คะแนนของ{" "}
-              <span className="text-old-rose font-semibold">{user.groupName}</span>
+              แนบรูปหลักฐานของ{" "}
+              <span className="text-old-rose font-semibold">{user.groupName}</span>{" "}
+              พร้อมตั้งชื่อหมวดประเด็นเองได้
             </p>
           </div>
 
@@ -273,26 +287,40 @@ export function PhotosManager({
                     className="w-full rounded-xl border border-[#DFD5C9] bg-[#FFFDFB] px-3 py-2 text-sm text-[#111111] placeholder:text-[#8A8A8A] focus:border-[#C06C84] focus:outline-none"
                   />
                 </div>
+
                 <div>
                   <label
-                    htmlFor="photo-category"
+                    htmlFor="issue-category"
                     className="mb-1 block text-xs font-semibold text-[#111111]"
                   >
-                    หมวดคะแนนที่เกี่ยวข้อง (ไม่บังคับ)
+                    หมวดประเด็น (พิมพ์ตั้งชื่อใหม่เองได้ หรือเลือกจากเดิม)
                   </label>
-                  <select
-                    id="photo-category"
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full rounded-xl border border-[#DFD5C9] bg-[#FFFDFB] px-3 py-2 text-sm text-[#111111] focus:border-[#C06C84] focus:outline-none"
-                  >
-                    <option value="">— ไม่ระบุหมวดหมู่ —</option>
-                    {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.title}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    id="issue-category"
+                    type="text"
+                    value={issueCategory}
+                    onChange={(e) => setIssueCategory(e.target.value)}
+                    placeholder="เช่น ปัญหาหน้างาน, ผลงานรอบเช้า, ความปลอดภัย"
+                    className="w-full rounded-xl border border-[#DFD5C9] bg-[#FFFDFB] px-3 py-2 text-sm text-[#111111] placeholder:text-[#8A8A8A] focus:border-[#C06C84] focus:outline-none"
+                  />
+                  {existingIssues.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {existingIssues.map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setIssueCategory(cat)}
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition ${
+                            issueCategory.trim() === cat
+                              ? "border-[#C06C84] bg-old-rose-soft text-old-rose"
+                              : "border-[#E5DDD3] bg-[#FAF8F5] text-[#555555] hover:border-[#C06C84]"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -308,18 +336,35 @@ export function PhotosManager({
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-bold text-[#111111]">
-            แกลเลอรีหลักฐานของกลุ่ม{" "}
-            <span className="text-old-rose">({photos.length} รูป)</span>
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-[#111111]">
+              แกลเลอรีหลักฐานของกลุ่ม{" "}
+              <span className="text-old-rose">({filteredPhotos.length} รูป)</span>
+            </h2>
+            {existingIssues.length > 0 ? (
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="rounded-xl border border-[#DFD5C9] bg-white px-3 py-1.5 text-xs text-[#111111] focus:border-[#C06C84] focus:outline-none"
+              >
+                <option value="all">ทุกหมวดประเด็น</option>
+                {existingIssues.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+                <option value="__none__">ไม่ระบุหมวดประเด็น</option>
+              </select>
+            ) : null}
+          </div>
 
-          {photos.length === 0 ? (
+          {filteredPhotos.length === 0 ? (
             <div className="rounded-2xl border border-[#E6DDD2] bg-white/95 p-8 text-center text-sm text-[#555555]">
-              ยังไม่มีรูปหลักฐานที่อัปโหลด
+              ยังไม่มีรูปหลักฐานในหมวดนี้
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-              {photos.map((p) => (
+              {filteredPhotos.map((p) => (
                 <div
                   key={p.id}
                   className="overflow-hidden rounded-2xl border border-[#E6DDD2] bg-white/95 shadow-xs"
@@ -360,8 +405,10 @@ export function PhotosManager({
                     )}
 
                     <div className="flex items-center justify-between gap-2 text-xs text-[#555555]">
-                      <span className="truncate">{p.categoryTitle || "ทั่วไป"}</span>
-                      <span className="text-old-rose shrink-0 font-mono">
+                      <span className="truncate rounded-full bg-old-rose-soft px-2 py-0.5 text-[11px] font-semibold text-old-rose">
+                        {p.issueCategory || "ทั่วไป"}
+                      </span>
+                      <span className="shrink-0 font-mono text-[#666666]">
                         {new Date(p.createdAt).toLocaleTimeString("th-TH", {
                           hour: "2-digit",
                           minute: "2-digit",

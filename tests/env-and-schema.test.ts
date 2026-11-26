@@ -40,6 +40,8 @@ describe("Supabase Admin & Schema", () => {
       expect(sql).toContain(`alter table public.${table} enable row level security`);
     }
     expect(sql).toContain("is_open boolean not null default true");
+    expect(sql).toContain("leaderboard_visible boolean not null default true");
+    expect(sql).toContain("issue_category text");
     expect(sql).toContain("create or replace function public.toggle_user_score");
     expect(sql).toContain("evidence-photos");
   });
