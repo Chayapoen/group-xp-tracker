@@ -6,6 +6,7 @@ export interface AdminCategoryItem {
   id: string;
   title: string;
   sort_order: number;
+  is_open: boolean;
   items: {
     id: string;
     category_id: string;
@@ -114,6 +115,19 @@ export function CategoriesTab({ categories, onRefresh }: CategoriesTabProps) {
       "จัดลำดับหมวดคะแนนไม่สำเร็จ"
     );
     if (okA && okB) await onRefresh();
+  }
+
+  async function handleToggleCategoryOpen(cat: AdminCategoryItem) {
+    const ok = await safeRequest(
+      `/api/admin/categories/${cat.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOpen: !cat.is_open }),
+      },
+      "เปลี่ยนสถานะหมวดคะแนนไม่สำเร็จ"
+    );
+    if (ok) await onRefresh();
   }
 
   async function handleDeleteCategory(id: string, title: string) {
@@ -288,7 +302,18 @@ export function CategoriesTab({ categories, onRefresh }: CategoriesTabProps) {
                     )}
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2 text-xs">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleCategoryOpen(cat)}
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                        cat.is_open !== false
+                          ? "bg-[#E8FCEF] text-[#15803D] hover:bg-[#D1FADF]"
+                          : "bg-[#F3F4F6] text-[#6B7280] hover:bg-[#E5E7EB]"
+                      }`}
+                    >
+                      {cat.is_open !== false ? "เปิดให้จดคะแนน" : "ปิดการจดคะแนน"}
+                    </button>
                     <button
                       type="button"
                       disabled={catIdx === 0}

@@ -6,7 +6,10 @@ interface JoinedScoreItem {
   id: string;
   title: string;
   xp: number;
-  score_categories: { title: string } | { title: string }[] | null;
+  score_categories:
+    | { title: string; is_open?: boolean }
+    | { title: string; is_open?: boolean }[]
+    | null;
 }
 
 export async function POST(request: Request) {
@@ -25,7 +28,7 @@ export async function POST(request: Request) {
     const supabase = getSupabaseAdmin();
     const { data: itemData, error: itemError } = await supabase
       .from("score_items")
-      .select("id, title, xp, score_categories(title)")
+      .select("id, title, xp, score_categories(title, is_open)")
       .eq("id", itemId)
       .maybeSingle();
 
@@ -37,6 +40,12 @@ export async function POST(request: Request) {
     const categoryObj = Array.isArray(item.score_categories)
       ? item.score_categories[0]
       : item.score_categories;
+    if (categoryObj?.is_open === false) {
+      return NextResponse.json(
+        { error: "หมวดคะแนนนี้ถูกปิดการจดคะแนนชั่วคราว" },
+        { status: 403 }
+      );
+    }
     const categoryTitle = categoryObj?.title ?? "ไม่ระบุหมวดหมู่";
 
     const { error: rpcError } = await supabase.rpc("toggle_user_score", {

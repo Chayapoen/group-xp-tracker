@@ -13,7 +13,11 @@ export async function PATCH(
 
   try {
     const { id } = await context.params;
-    const body = (await request.json()) as { title?: string; sortOrder?: number };
+    const body = (await request.json()) as {
+      title?: string;
+      sortOrder?: number;
+      isOpen?: boolean;
+    };
     const updates: Record<string, unknown> = {};
     if (body.title !== undefined) {
       const trimmed = body.title.trim();
@@ -25,13 +29,20 @@ export async function PATCH(
     if (typeof body.sortOrder === "number") {
       updates.sort_order = body.sortOrder;
     }
+    if (typeof body.isOpen === "boolean") {
+      updates.is_open = body.isOpen;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: "ไม่มีข้อมูลที่ต้องการอัปเดต" }, { status: 400 });
+    }
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("score_categories")
       .update(updates)
       .eq("id", id)
-      .select("id, title, sort_order, created_at")
+      .select("id, title, sort_order, is_open, created_at")
       .single();
 
     if (error) {

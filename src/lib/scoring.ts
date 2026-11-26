@@ -13,6 +13,7 @@ export interface CategorySummary {
   id: string;
   title: string;
   sortOrder: number;
+  isOpen: boolean;
   earnedXp: number;
   maxXp: number;
   items: ScoreItemView[];
@@ -60,6 +61,7 @@ export function calculateCategorySummaries(
         id: cat.id,
         title: cat.title,
         sortOrder: cat.sort_order,
+        isOpen: cat.is_open !== false,
         earnedXp,
         maxXp,
         items: catItems,

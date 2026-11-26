@@ -11,6 +11,7 @@ export interface ScoreCategoryRow {
   id: string;
   title: string;
   sort_order: number;
+  is_open?: boolean;
   created_at: string;
 }
 

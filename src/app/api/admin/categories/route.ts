@@ -12,7 +12,7 @@ export async function GET() {
   const [catsRes, itemsRes] = await Promise.all([
     supabase
       .from("score_categories")
-      .select("id, title, sort_order, created_at")
+      .select("id, title, sort_order, is_open, created_at")
       .order("sort_order"),
     supabase
       .from("score_items")
@@ -46,7 +46,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { title?: string; sortOrder?: number };
+    const body = (await request.json()) as {
+      title?: string;
+      sortOrder?: number;
+      isOpen?: boolean;
+    };
     const title = (body.title ?? "").trim();
     if (!title) {
       return NextResponse.json({ error: "กรุณากรอกชื่อหมวดคะแนน" }, { status: 400 });
@@ -58,8 +62,9 @@ export async function POST(request: Request) {
       .insert({
         title,
         sort_order: typeof body.sortOrder === "number" ? body.sortOrder : 0,
+        is_open: typeof body.isOpen === "boolean" ? body.isOpen : true,
       })
-      .select("id, title, sort_order, created_at")
+      .select("id, title, sort_order, is_open, created_at")
       .single();
 
     if (error) {

@@ -35,8 +35,8 @@ describe("Scoring calculations & atomic toggle API", () => {
 
   it("calculates category earned XP, max XP, and total XP matching spec example", () => {
     const categories = [
-      { id: "c1", title: "คะแนนหมวด 1", sort_order: 1, created_at: "" },
-      { id: "c2", title: "คะแนนหมวด 2", sort_order: 2, created_at: "" },
+      { id: "c1", title: "คะแนนหมวด 1", sort_order: 1, is_open: true, created_at: "" },
+      { id: "c2", title: "คะแนนหมวด 2", sort_order: 2, is_open: false, created_at: "" },
     ];
     const items = [
       { id: "i1", category_id: "c1", title: "สำเร็จข้อ 1", xp: 150, sort_order: 1 },
@@ -54,8 +54,10 @@ describe("Scoring calculations & atomic toggle API", () => {
     const summaries = calculateCategorySummaries(categories, items, userScores);
     expect(summaries[0].earnedXp).toBe(150);
     expect(summaries[0].maxXp).toBe(300);
+    expect(summaries[0].isOpen).toBe(true);
     expect(summaries[1].earnedXp).toBe(400);
     expect(summaries[1].maxXp).toBe(400);
+    expect(summaries[1].isOpen).toBe(false);
     expect(calculateTotalXp(summaries)).toBe(550);
   });
 
@@ -82,7 +84,7 @@ describe("Scoring calculations & atomic toggle API", () => {
         id: "i1",
         title: "สำเร็จข้อ 1",
         xp: 150,
-        score_categories: { title: "คะแนนหมวด 1" },
+        score_categories: { title: "คะแนนหมวด 1", is_open: true },
       },
       error: null,
     });
@@ -104,5 +106,32 @@ describe("Scoring calculations & atomic toggle API", () => {
       p_xp: 150,
       p_changed_by: "team01",
     });
+  });
+
+  it("blocks score toggle with 403 when the category is closed by admin", async () => {
+    mockRequireUserSession.mockResolvedValue({
+      role: "user",
+      userId: "u1",
+      username: "team01",
+      groupName: "กลุ่ม 1",
+    });
+    mockItemSingle.mockResolvedValue({
+      data: {
+        id: "i3",
+        title: "สำเร็จข้อ 1",
+        xp: 200,
+        score_categories: { title: "คะแนนหมวด 2", is_open: false },
+      },
+      error: null,
+    });
+
+    const req = new Request("http://localhost/api/scores/toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId: "i3", passed: true }),
+    });
+    const res = await toggleScore(req);
+    expect(res.status).toBe(403);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 });

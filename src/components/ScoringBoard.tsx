@@ -67,7 +67,13 @@ export function ScoringBoard({
     );
   }
 
-  function handleToggle(catId: string, itemId: string, currentPassed: boolean) {
+  function handleToggle(
+    catId: string,
+    itemId: string,
+    currentPassed: boolean,
+    isOpen: boolean
+  ) {
+    if (!isOpen) return;
     const nextPassed = !currentPassed;
     const seq = (latestSeqByItemRef.current.get(itemId) ?? 0) + 1;
     latestSeqByItemRef.current.set(itemId, seq);
@@ -165,11 +171,20 @@ export function ScoringBoard({
             {categories.map((cat) => (
               <div
                 key={cat.id}
-                className="flex flex-col overflow-hidden rounded-2xl border border-[#E6DDD2] bg-white/95 shadow-xs"
+                className={`flex flex-col overflow-hidden rounded-2xl border bg-white/95 shadow-xs ${
+                  cat.isOpen ? "border-[#E6DDD2]" : "border-[#E5E7EB] opacity-80"
+                }`}
               >
                 <div className="category-header-gradient flex items-start justify-between gap-3 border-b border-[#EFE8DF] px-4 py-3.5">
                   <div>
-                    <h2 className="text-sm font-bold text-[#111111]">{cat.title}</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-sm font-bold text-[#111111]">{cat.title}</h2>
+                      {!cat.isOpen ? (
+                        <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[11px] font-semibold text-[#6B7280]">
+                          ปิดการจดคะแนน
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="mt-0.5 text-xs text-[#555555]">
                       สูงสุด {cat.maxXp.toLocaleString()} XP
                     </div>
@@ -200,8 +215,11 @@ export function ScoringBoard({
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleToggle(cat.id, item.id, item.passed)}
-                          className={`shrink-0 rounded-xl border px-3.5 py-2 text-xs font-semibold transition ${
+                          disabled={!cat.isOpen}
+                          onClick={() =>
+                            handleToggle(cat.id, item.id, item.passed, cat.isOpen)
+                          }
+                          className={`shrink-0 rounded-xl border px-3.5 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                             item.passed
                               ? "border-[#86EFAC] bg-[#E8FCEF] text-[#15803D]"
                               : "border-[#DDD4C9] bg-[#FAF8F5] text-[#444444] hover:border-[#C06C84] hover:text-[#B45A73]"

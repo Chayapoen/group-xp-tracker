@@ -39,6 +39,7 @@ describe("Supabase Admin & Schema", () => {
       expect(sql).toContain(`create table if not exists public.${table}`);
       expect(sql).toContain(`alter table public.${table} enable row level security`);
     }
+    expect(sql).toContain("is_open boolean not null default true");
     expect(sql).toContain("create or replace function public.toggle_user_score");
     expect(sql).toContain("evidence-photos");
   });
