@@ -87,6 +87,11 @@ create table if not exists public.evidence_photos (
 
 create index if not exists idx_evidence_photos_user_id_created on public.evidence_photos(user_id, created_at desc);
 
+-- 7b. Idempotent column upgrades for existing databases
+alter table public.app_settings add column if not exists leaderboard_visible boolean not null default true;
+alter table public.score_categories add column if not exists is_open boolean not null default true;
+alter table public.evidence_photos add column if not exists issue_category text;
+
 -- 8. Row-Level Security (RLS)
 -- All application reads/writes run server-side via SUPABASE_SERVICE_ROLE_KEY (which bypasses RLS).
 -- Enabling RLS with no anon/authenticated policies blocks direct PostgREST access.
