@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 export type SaveStatus = "saved" | "saving" | "error";
 
@@ -36,18 +35,49 @@ export function AppHeader({
   username,
   groupName,
 }: AppHeaderProps) {
-  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
   const avatar = getUserAvatarInfo(username);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        menuContainerRef.current &&
+        !menuContainerRef.current.contains(event.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.assign("/login");
+    }
   }
 
   return (
-    <header className="sticky top-0 z-30 border-b border-[#EAE1D7] bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-[#EAE1D7] bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
         {/* Top-Left: Project Icon + Name */}
         <div className="flex min-w-0 items-center gap-2">
@@ -68,7 +98,7 @@ export function AppHeader({
         </div>
 
         {/* Top-Right: Save Status right before User Initial Icon */}
-        <div className="relative flex shrink-0 items-center gap-2">
+        <div ref={menuContainerRef} className="relative flex shrink-0 items-center gap-2">
           {saveStatus === "saving" ? (
             <div className="inline-flex items-center gap-1.5 rounded-full border border-[#F5C596] bg-[#FFF4E6] px-2.5 py-1 text-xs font-semibold text-[#B45309]">
               <span className="pulse-dot inline-block h-2 w-2 rounded-full bg-[#F59E0B]" />
@@ -95,7 +125,9 @@ export function AppHeader({
           <button
             type="button"
             onClick={() => setMenuOpen((prev) => !prev)}
-            className="flex items-center gap-2 rounded-full border border-[#E5DDD3] bg-[#FFFDFB] p-1 pr-2.5 text-xs transition hover:border-[#C06C84]"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            className="flex cursor-pointer items-center gap-2 rounded-full border border-[#E5DDD3] bg-[#FFFDFB] p-1 text-xs transition hover:border-[#C06C84] sm:pr-2.5"
             aria-label="ข้อมูลผู้ใช้งาน"
           >
             <span
@@ -109,7 +141,10 @@ export function AppHeader({
           </button>
 
           {menuOpen ? (
-            <div className="absolute right-0 top-12 z-40 w-60 rounded-xl border border-[#E5DDD3] bg-white p-3 shadow-lg">
+            <div
+              role="menu"
+              className="absolute right-0 top-12 z-50 w-60 rounded-xl border border-[#E5DDD3] bg-white p-3 shadow-lg"
+            >
               <div className="mb-2.5 border-b border-[#EFE8DF] pb-2.5">
                 <div className="text-xs text-[#666666]">เข้าสู่ระบบในชื่อ</div>
                 <div className="text-sm font-bold text-[#111111]">{username}</div>
@@ -119,10 +154,11 @@ export function AppHeader({
               </div>
               <button
                 type="button"
+                disabled={loggingOut}
                 onClick={handleLogout}
-                className="w-full rounded-lg border border-[#F2C6C6] bg-[#FFF5F5] px-3 py-1.5 text-xs font-semibold text-[#B91C1C] transition hover:bg-[#FEE2E2]"
+                className="w-full cursor-pointer rounded-lg border border-[#F2C6C6] bg-[#FFF5F5] px-3 py-1.5 text-xs font-semibold text-[#B91C1C] transition hover:bg-[#FEE2E2] disabled:opacity-60"
               >
-                ออกจากระบบ
+                {loggingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
               </button>
             </div>
           ) : null}
