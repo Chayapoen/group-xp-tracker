@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { hashPassword } from "@/lib/auth";
 
 const mockMaybeSingle = vi.fn();
+const mockIlike = vi.fn(() => ({ maybeSingle: mockMaybeSingle }));
 const mockEq = vi.fn(() => ({ maybeSingle: mockMaybeSingle }));
-const mockSelect = vi.fn(() => ({ eq: mockEq }));
+const mockSelect = vi.fn(() => ({ eq: mockEq, ilike: mockIlike }));
 const mockFrom = vi.fn(() => ({ select: mockSelect }));
 
 vi.mock("@/lib/supabase-admin", () => ({
@@ -97,5 +98,36 @@ describe("Auth API routes", () => {
     const res = await adminLogin(req);
     expect(res.status).toBe(200);
     expect(res.headers.get("set-cookie")).toContain("gxp_session=");
+  });
+
+  it("matches username case-insensitively and sets Secure only on HTTPS", async () => {
+    mockMaybeSingle.mockResolvedValue({
+      data: {
+        id: "user-pol",
+        username: "Pol",
+        password_hash: hashPassword("pass123"),
+        group_name: "กลุ่ม Pol",
+        is_active: true,
+      },
+      error: null,
+    });
+
+    const httpReq = new Request("http://192.168.1.10:3000/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "pol", password: "pass123" }),
+    });
+    const httpRes = await userLogin(httpReq);
+    expect(httpRes.status).toBe(200);
+    expect(httpRes.headers.get("set-cookie")).not.toContain("; Secure");
+
+    const httpsReq = new Request("https://example.vercel.app/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: "pol", password: "pass123" }),
+    });
+    const httpsRes = await userLogin(httpsReq);
+    expect(httpsRes.status).toBe(200);
+    expect(httpsRes.headers.get("set-cookie")).toContain("; Secure");
   });
 });

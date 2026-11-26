@@ -28,7 +28,11 @@ export async function POST(request: Request) {
 
     const token = signSessionToken({ role: "admin", username });
     const response = NextResponse.json({ admin: { username } });
-    response.cookies.set(SESSION_COOKIE_NAME, token, buildSessionCookieOptions());
+    response.cookies.set(
+      SESSION_COOKIE_NAME,
+      token,
+      buildSessionCookieOptions(undefined, request)
+    );
     return response;
   } catch {
     return NextResponse.json(

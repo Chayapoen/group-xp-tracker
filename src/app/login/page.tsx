@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [projectName, setProjectName] = useState("ระบบจดคะแนน");
   const [projectIconUrl, setProjectIconUrl] = useState<string | null>(null);
   const [username, setUsername] = useState("");
@@ -34,13 +32,12 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || "เข้าสู่ระบบไม่สำเร็จ");
         return;
       }
-      router.push("/");
-      router.refresh();
+      window.location.assign("/");
     } catch {
       setError("เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่");
     } finally {

@@ -21,10 +21,11 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseAdmin();
+    const escapedUsername = username.replace(/[\\%_]/g, (m) => `\\${m}`);
     const { data: user, error } = await supabase
       .from("temp_users")
       .select("id, username, password_hash, group_name, is_active")
-      .eq("username", username)
+      .ilike("username", escapedUsername)
       .maybeSingle();
 
     if (error || !user || !verifyPassword(password, user.password_hash)) {
@@ -55,7 +56,11 @@ export async function POST(request: Request) {
         groupName: user.group_name,
       },
     });
-    response.cookies.set(SESSION_COOKIE_NAME, token, buildSessionCookieOptions());
+    response.cookies.set(
+      SESSION_COOKIE_NAME,
+      token,
+      buildSessionCookieOptions(undefined, request)
+    );
     return response;
   } catch {
     return NextResponse.json(

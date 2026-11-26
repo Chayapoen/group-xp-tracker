@@ -145,11 +145,23 @@ export async function requireAdminSession(): Promise<AdminSession | null> {
   };
 }
 
-export function buildSessionCookieOptions(maxAgeSeconds: number = DEFAULT_SESSION_TTL_SECONDS) {
+export function isHttpsRequest(request?: Request): boolean {
+  if (!request) return process.env.NODE_ENV === "production";
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (forwardedProto) {
+    return forwardedProto.split(",")[0].trim().toLowerCase() === "https";
+  }
+  return request.url.toLowerCase().startsWith("https://");
+}
+
+export function buildSessionCookieOptions(
+  maxAgeSeconds: number = DEFAULT_SESSION_TTL_SECONDS,
+  request?: Request
+) {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure: isHttpsRequest(request),
     path: "/",
     maxAge: maxAgeSeconds,
   };
