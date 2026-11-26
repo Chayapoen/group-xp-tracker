@@ -2,7 +2,11 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { requireUserSession } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { validatePhotoUpload } from "@/lib/photo-validation";
+import {
+  extensionForMimeType,
+  validateImageBuffer,
+  validatePhotoUpload,
+} from "@/lib/photo-validation";
 
 const BUCKET_NAME = "evidence-photos";
 
@@ -55,16 +59,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    const ext = file.name.includes(".")
-      ? file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg"
-      : "jpg";
-    const storagePath = `${session.userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const arrayBuffer = await file.arrayBuffer();
+    const ext = extensionForMimeType(file.type);
+    if (!ext) {
+      return NextResponse.json(
+        { error: "รองรับเฉพาะไฟล์รูปภาพ JPEG, PNG, WebP, GIF หรือ HEIC เท่านั้น" },
+        { status: 400 }
+      );
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    if (!validateImageBuffer(buffer, file.type)) {
+      return NextResponse.json(
+        { error: "ไฟล์รูปภาพไม่ถูกต้องหรือเสียหาย" },
+        { status: 400 }
+      );
+    }
 
     const supabase = getSupabaseAdmin();
+
+    // Validate optional categoryId upfront before uploading to Storage
+    if (categoryId) {
+      const { data: cat, error: catErr } = await supabase
+        .from("score_categories")
+        .select("id")
+        .eq("id", categoryId)
+        .maybeSingle();
+      if (catErr || !cat) {
+        return NextResponse.json(
+          { error: "ไม่พบหมวดคะแนนที่เลือก" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const storagePath = `${session.userId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
-      .upload(storagePath, Buffer.from(arrayBuffer), {
+      .upload(storagePath, buffer, {
         contentType: file.type,
         upsert: false,
       });

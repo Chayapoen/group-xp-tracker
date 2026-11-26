@@ -4,7 +4,11 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { calculateCategorySummaries, calculateTotalXp } from "@/lib/scoring";
 
 function escapeCsvCell(value: string | number | boolean): string {
-  const str = String(value);
+  let str = String(value);
+  // Neutralize Excel/Sheets formula injection (CWE-1236)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = "'" + str;
+  }
   if (/[",\r\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }
@@ -35,6 +39,10 @@ export async function GET() {
       supabase.from("user_scores").select("user_id, item_id, passed").order("user_id"),
     ]);
 
+    if (usersRes.error || catsRes.error || itemsRes.error || scoresRes.error) {
+      return NextResponse.json({ error: "ไม่สามารถดึงข้อมูลคะแนนได้" }, { status: 500 });
+    }
+
     const users = usersRes.data ?? [];
     const categories = catsRes.data ?? [];
     const items = itemsRes.data ?? [];
@@ -47,19 +55,20 @@ export async function GET() {
       else scoresByUser.set(s.user_id, [s]);
     }
 
+    const sortedCategories = [...categories].sort((a, b) => a.sort_order - b.sort_order);
     const headers = [
       "อันดับ",
       "ชื่อกลุ่ม",
       "Username",
       "สถานะ",
-      ...categories.map((c) => c.title),
+      ...sortedCategories.map((c) => c.title),
       "คะแนนรวม XP",
     ];
 
     const rows = users
       .map((u) => {
         const summaries = calculateCategorySummaries(
-          categories,
+          sortedCategories,
           items,
           scoresByUser.get(u.id) ?? []
         );

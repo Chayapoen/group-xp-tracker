@@ -31,6 +31,19 @@ export async function GET() {
           .eq("user_id", session.userId),
       ]);
 
+    if (
+      categoriesRes.error ||
+      itemsRes.error ||
+      scoresRes.error ||
+      photosCountRes.error ||
+      historyCountRes.error
+    ) {
+      return NextResponse.json(
+        { error: "ไม่สามารถโหลดข้อมูลคะแนนได้" },
+        { status: 500 }
+      );
+    }
+
     const categories = calculateCategorySummaries(
       categoriesRes.data ?? [],
       itemsRes.data ?? [],

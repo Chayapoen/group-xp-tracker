@@ -36,7 +36,7 @@ export function UsersTab({ users, onRefresh }: UsersTabProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password, groupName }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "สร้างบัญชีไม่สำเร็จ");
       setUsername("");
       setPassword("");
@@ -50,38 +50,53 @@ export function UsersTab({ users, onRefresh }: UsersTabProps) {
   }
 
   async function handleToggleActive(u: AdminUserItem) {
-    await fetch(`/api/admin/users/${u.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !u.is_active }),
-    });
-    await onRefresh();
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !u.is_active }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "เปลี่ยนสถานะไม่สำเร็จ");
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เปลี่ยนสถานะไม่สำเร็จ");
+    }
   }
 
   async function handleSaveEdit(id: string) {
     setError(null);
-    const res = await fetch(`/api/admin/users/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        groupName: editGroupName,
-        ...(editPassword.trim() ? { password: editPassword } : {}),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || "บันทึกไม่สำเร็จ");
-      return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          groupName: editGroupName,
+          ...(editPassword.trim() ? { password: editPassword } : {}),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "บันทึกไม่สำเร็จ");
+      setEditingId(null);
+      setEditPassword("");
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
     }
-    setEditingId(null);
-    setEditPassword("");
-    await onRefresh();
   }
 
   async function handleDelete(u: AdminUserItem) {
     if (!window.confirm(`ต้องการลบบัญชี "${u.username}" (${u.group_name}) ใช่หรือไม่?`)) return;
-    await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
-    await onRefresh();
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "ลบผู้ใช้ไม่สำเร็จ");
+      await onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "ลบผู้ใช้ไม่สำเร็จ");
+    }
   }
 
   return (

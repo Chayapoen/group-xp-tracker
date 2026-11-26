@@ -84,7 +84,60 @@ create table if not exists public.evidence_photos (
 
 create index if not exists idx_evidence_photos_user_id_created on public.evidence_photos(user_id, created_at desc);
 
--- 8. Storage Bucket for Evidence Photos
+-- 8. Row-Level Security (RLS)
+-- All application reads/writes run server-side via SUPABASE_SERVICE_ROLE_KEY (which bypasses RLS).
+-- Enabling RLS with no anon/authenticated policies blocks direct PostgREST access.
+alter table public.app_settings enable row level security;
+alter table public.temp_users enable row level security;
+alter table public.score_categories enable row level security;
+alter table public.score_items enable row level security;
+alter table public.user_scores enable row level security;
+alter table public.score_history enable row level security;
+alter table public.evidence_photos enable row level security;
+
+-- 9. Atomic RPC for score toggle + immutable history snapshot
+create or replace function public.toggle_user_score(
+  p_user_id uuid,
+  p_item_id uuid,
+  p_passed boolean,
+  p_category_title text,
+  p_item_title text,
+  p_xp integer,
+  p_changed_by text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.user_scores (user_id, item_id, passed, updated_at)
+  values (p_user_id, p_item_id, p_passed, now())
+  on conflict (user_id, item_id)
+  do update set passed = excluded.passed, updated_at = excluded.updated_at;
+
+  insert into public.score_history (
+    user_id,
+    item_id,
+    category_title,
+    item_title,
+    xp,
+    passed,
+    changed_by
+  )
+  values (
+    p_user_id,
+    p_item_id,
+    p_category_title,
+    p_item_title,
+    p_xp,
+    p_passed,
+    p_changed_by
+  );
+end;
+$$;
+
+-- 10. Storage Bucket for Evidence Photos
 insert into storage.buckets (id, name, public)
 values ('evidence-photos', 'evidence-photos', true)
 on conflict (id) do nothing;

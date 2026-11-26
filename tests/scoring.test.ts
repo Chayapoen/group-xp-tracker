@@ -5,8 +5,7 @@ vi.mock("@/lib/auth", () => ({
   requireUserSession: () => mockRequireUserSession(),
 }));
 
-const mockUpsert = vi.fn();
-const mockInsert = vi.fn();
+const mockRpc = vi.fn();
 const mockItemSingle = vi.fn();
 
 const mockFrom = vi.fn((table: string) => {
@@ -19,23 +18,17 @@ const mockFrom = vi.fn((table: string) => {
       }),
     };
   }
-  if (table === "user_scores") {
-    return { upsert: mockUpsert };
-  }
-  if (table === "score_history") {
-    return { insert: mockInsert };
-  }
   return {};
 });
 
 vi.mock("@/lib/supabase-admin", () => ({
-  getSupabaseAdmin: vi.fn(() => ({ from: mockFrom })),
+  getSupabaseAdmin: vi.fn(() => ({ from: mockFrom, rpc: mockRpc })),
 }));
 
 import { calculateCategorySummaries, calculateTotalXp } from "@/lib/scoring";
 import { POST as toggleScore } from "@/app/api/scores/toggle/route";
 
-describe("Scoring calculations & toggle API", () => {
+describe("Scoring calculations & atomic toggle API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -77,7 +70,7 @@ describe("Scoring calculations & toggle API", () => {
     expect(res.status).toBe(401);
   });
 
-  it("upserts user_scores and appends immutable snapshot to score_history", async () => {
+  it("calls atomic toggle_user_score RPC with snapshot fields", async () => {
     mockRequireUserSession.mockResolvedValue({
       role: "user",
       userId: "u1",
@@ -93,8 +86,7 @@ describe("Scoring calculations & toggle API", () => {
       },
       error: null,
     });
-    mockUpsert.mockResolvedValue({ error: null });
-    mockInsert.mockResolvedValue({ error: null });
+    mockRpc.mockResolvedValue({ error: null });
 
     const req = new Request("http://localhost/api/scores/toggle", {
       method: "POST",
@@ -103,20 +95,14 @@ describe("Scoring calculations & toggle API", () => {
     });
     const res = await toggleScore(req);
     expect(res.status).toBe(200);
-    expect(mockUpsert).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: "u1", item_id: "i1", passed: true }),
-      { onConflict: "user_id,item_id" }
-    );
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        user_id: "u1",
-        item_id: "i1",
-        category_title: "คะแนนหมวด 1",
-        item_title: "สำเร็จข้อ 1",
-        xp: 150,
-        passed: true,
-        changed_by: "team01",
-      })
-    );
+    expect(mockRpc).toHaveBeenCalledWith("toggle_user_score", {
+      p_user_id: "u1",
+      p_item_id: "i1",
+      p_passed: true,
+      p_category_title: "คะแนนหมวด 1",
+      p_item_title: "สำเร็จข้อ 1",
+      p_xp: 150,
+      p_changed_by: "team01",
+    });
   });
 });

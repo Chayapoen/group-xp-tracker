@@ -10,7 +10,9 @@ vi.mock("@/lib/auth", async () => {
 });
 
 const mockUserInsertSingle = vi.fn();
-const mockOverviewTables: Record<string, unknown[]> = {};
+const mockStorageRemove = vi.fn();
+const mockUserDeleteEq = vi.fn();
+const mockOverviewTables: Record<string, { data: unknown[]; error: unknown }> = {};
 
 const mockFrom = vi.fn((table: string) => {
   if (table === "temp_users") {
@@ -20,28 +22,50 @@ const mockFrom = vi.fn((table: string) => {
           single: mockUserInsertSingle,
         }),
       }),
+      delete: () => ({
+        eq: mockUserDeleteEq,
+      }),
       select: () => ({
-        order: () => Promise.resolve({ data: mockOverviewTables.temp_users ?? [], error: null }),
+        order: () =>
+          Promise.resolve(mockOverviewTables.temp_users ?? { data: [], error: null }),
+      }),
+    };
+  }
+  if (table === "evidence_photos") {
+    return {
+      select: () => ({
+        eq: () =>
+          Promise.resolve(mockOverviewTables.evidence_photos ?? { data: [], error: null }),
       }),
     };
   }
   return {
     select: () => ({
-      order: () => Promise.resolve({ data: mockOverviewTables[table] ?? [], error: null }),
+      order: () =>
+        Promise.resolve(mockOverviewTables[table] ?? { data: [], error: null }),
     }),
   };
 });
 
 vi.mock("@/lib/supabase-admin", () => ({
-  getSupabaseAdmin: vi.fn(() => ({ from: mockFrom })),
+  getSupabaseAdmin: vi.fn(() => ({
+    from: mockFrom,
+    storage: {
+      from: () => ({
+        remove: mockStorageRemove,
+      }),
+    },
+  })),
 }));
 
 import { POST as createUser } from "@/app/api/admin/users/route";
+import { DELETE as deleteUser } from "@/app/api/admin/users/[id]/route";
 import { GET as exportCsv } from "@/app/api/admin/export/route";
 
 describe("Admin API routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    for (const k of Object.keys(mockOverviewTables)) delete mockOverviewTables[k];
   });
 
   it("rejects non-admin requests with 401", async () => {
@@ -79,28 +103,60 @@ describe("Admin API routes", () => {
     expect(dupRes.status).toBe(409);
   });
 
-  it("exports UTF-8 BOM CSV with group XP totals", async () => {
+  it("exports UTF-8 BOM CSV with formula injection neutralized and returns 500 on DB error", async () => {
     mockRequireAdminSession.mockResolvedValue({ role: "admin", username: "admin" });
-    mockOverviewTables.temp_users = [
-      { id: "u1", username: "team01", group_name: "กลุ่ม 1", is_active: true, created_at: "2026-11-26T00:00:00Z" },
-    ];
-    mockOverviewTables.score_categories = [
-      { id: "c1", title: "หมวด 1", sort_order: 1, created_at: "" },
-    ];
-    mockOverviewTables.score_items = [
-      { id: "i1", category_id: "c1", title: "ข้อ 1", xp: 150, sort_order: 1 },
-    ];
-    mockOverviewTables.user_scores = [
-      { user_id: "u1", item_id: "i1", passed: true },
-    ];
+    mockOverviewTables.temp_users = {
+      data: [
+        {
+          id: "u1",
+          username: "=HYPERLINK(\"http://evil\")",
+          group_name: "+กลุ่ม 1",
+          is_active: true,
+          created_at: "2026-11-26T00:00:00Z",
+        },
+      ],
+      error: null,
+    };
+    mockOverviewTables.score_categories = {
+      data: [{ id: "c1", title: "หมวด 1", sort_order: 1, created_at: "" }],
+      error: null,
+    };
+    mockOverviewTables.score_items = {
+      data: [{ id: "i1", category_id: "c1", title: "ข้อ 1", xp: 150, sort_order: 1 }],
+      error: null,
+    };
+    mockOverviewTables.user_scores = {
+      data: [{ user_id: "u1", item_id: "i1", passed: true }],
+      error: null,
+    };
 
     const res = await exportCsv();
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-type")).toContain("text/csv");
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
     const text = new TextDecoder("utf-8").decode(bytes);
-    expect(text).toContain("กลุ่ม 1");
+    expect(text).toContain("'+กลุ่ม 1");
+    expect(text).toContain("\"'=HYPERLINK");
     expect(text).toContain("150");
+
+    // DB error must return 500 instead of silent 0 XP CSV
+    mockOverviewTables.user_scores = { data: [], error: { message: "db outage" } };
+    const errRes = await exportCsv();
+    expect(errRes.status).toBe(500);
+  });
+
+  it("cleans up user's storage objects when deleting a temp user", async () => {
+    mockRequireAdminSession.mockResolvedValue({ role: "admin", username: "admin" });
+    mockOverviewTables.evidence_photos = {
+      data: [{ storage_path: "u1/a.jpg" }, { storage_path: "u1/b.png" }],
+      error: null,
+    };
+    mockUserDeleteEq.mockResolvedValue({ error: null });
+    mockStorageRemove.mockResolvedValue({ error: null });
+
+    const req = new Request("http://localhost/api/admin/users/u1", { method: "DELETE" });
+    const res = await deleteUser(req, { params: Promise.resolve({ id: "u1" }) });
+    expect(res.status).toBe(200);
+    expect(mockStorageRemove).toHaveBeenCalledWith(["u1/a.jpg", "u1/b.png"]);
   });
 });

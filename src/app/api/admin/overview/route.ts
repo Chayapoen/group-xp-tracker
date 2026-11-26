@@ -38,6 +38,17 @@ export async function GET() {
           .order("created_at", { ascending: false }),
       ]);
 
+    if (
+      usersRes.error ||
+      catsRes.error ||
+      itemsRes.error ||
+      scoresRes.error ||
+      historyRes.error ||
+      photosRes.error
+    ) {
+      return NextResponse.json({ error: "ไม่สามารถโหลดข้อมูลสรุปได้" }, { status: 500 });
+    }
+
     const users = usersRes.data ?? [];
     const categories = catsRes.data ?? [];
     const items = itemsRes.data ?? [];

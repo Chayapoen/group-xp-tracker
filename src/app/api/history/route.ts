@@ -24,6 +24,13 @@ export async function GET() {
         .eq("user_id", session.userId),
     ]);
 
+    if (historyRes.error || photosCountRes.error) {
+      return NextResponse.json(
+        { error: "ไม่สามารถโหลดประวัติคะแนนได้" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       projectName: settingsRes.data?.project_name || "ระบบจดคะแนน",
       user: {

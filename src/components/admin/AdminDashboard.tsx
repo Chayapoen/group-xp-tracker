@@ -27,32 +27,45 @@ export function AdminDashboard() {
   const [history, setHistory] = useState<AdminHistoryRow[]>([]);
   const [photos, setPhotos] = useState<AdminPhotoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
-    const [overviewRes, usersRes, catsRes] = await Promise.all([
-      fetch("/api/admin/overview"),
-      fetch("/api/admin/users"),
-      fetch("/api/admin/categories"),
-    ]);
+    setLoadError(null);
+    try {
+      const [overviewRes, usersRes, catsRes] = await Promise.all([
+        fetch("/api/admin/overview"),
+        fetch("/api/admin/users"),
+        fetch("/api/admin/categories"),
+      ]);
 
-    if (overviewRes.status === 401 || usersRes.status === 401) {
-      router.push("/admin/login");
-      return;
+      if (overviewRes.status === 401 || usersRes.status === 401 || catsRes.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+
+      if (!overviewRes.ok || !usersRes.ok || !catsRes.ok) {
+        throw new Error("ไม่สามารถโหลดข้อมูลจากเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการตั้งค่า Supabase");
+      }
+
+      const [overviewData, usersData, catsData] = await Promise.all([
+        overviewRes.json(),
+        usersRes.json(),
+        catsRes.json(),
+      ]);
+
+      setProjectName(overviewData.projectName || "ระบบจดคะแนน");
+      setLeaderboard(overviewData.leaderboard ?? []);
+      setHistory(overviewData.history ?? []);
+      setPhotos(overviewData.photos ?? []);
+      setUsers(usersData.users ?? []);
+      setCategories(catsData.categories ?? []);
+    } catch (err) {
+      setLoadError(
+        err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลดข้อมูล"
+      );
+    } finally {
+      setLoading(false);
     }
-
-    const [overviewData, usersData, catsData] = await Promise.all([
-      overviewRes.json(),
-      usersRes.json(),
-      catsRes.json(),
-    ]);
-
-    setProjectName(overviewData.projectName || "ระบบจดคะแนน");
-    setLeaderboard(overviewData.leaderboard ?? []);
-    setHistory(overviewData.history ?? []);
-    setPhotos(overviewData.photos ?? []);
-    setUsers(usersData.users ?? []);
-    setCategories(catsData.categories ?? []);
-    setLoading(false);
   }, [router]);
 
   useEffect(() => {
@@ -112,7 +125,20 @@ export function AdminDashboard() {
         </div>
       </nav>
 
-      <main className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+      <main className="mx-auto max-w-5xl space-y-4 px-4 py-5 sm:px-6">
+        {loadError ? (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-[#F2B8B5] bg-[#FEF2F2] px-4 py-3 text-xs font-medium text-[#B91C1C]">
+            <span>{loadError}</span>
+            <button
+              type="button"
+              onClick={loadAll}
+              className="rounded-lg border border-[#F2B8B5] bg-white px-2.5 py-1 font-semibold hover:bg-[#FEE2E2]"
+            >
+              ลองใหม่
+            </button>
+          </div>
+        ) : null}
+
         {loading ? (
           <div className="rounded-2xl border border-[#E6DDD2] bg-white/95 p-8 text-center text-sm text-[#555555]">
             กำลังโหลดข้อมูล...

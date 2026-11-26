@@ -84,9 +84,13 @@ export function PhotosManager({
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "อัปโหลดรูปหลักฐานไม่สำเร็จ");
+        throw new Error(
+          res.status === 413
+            ? "ขนาดไฟล์รูปภาพใหญ่เกินไป (ต้องไม่เกิน 4 MB)"
+            : data.error || "อัปโหลดรูปหลักฐานไม่สำเร็จ"
+        );
       }
 
       const raw = data.photo;
@@ -118,7 +122,11 @@ export function PhotosManager({
 
   async function handleRenameSave(id: string) {
     const trimmed = editingTitle.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      setError("กรุณากรอกชื่อรูปหลักฐาน");
+      return;
+    }
+    setError(null);
     setSaveStatus("saving");
     try {
       const res = await fetch(`/api/photos/${id}`, {
@@ -126,29 +134,32 @@ export function PhotosManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: trimmed }),
       });
-      if (!res.ok) throw new Error("แก้ไขชื่อรูปไม่สำเร็จ");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "แก้ไขชื่อรูปไม่สำเร็จ");
       setPhotos((prev) =>
         prev.map((p) => (p.id === id ? { ...p, title: trimmed } : p))
       );
       setEditingId(null);
       setSaveStatus("saved");
-    } catch {
+    } catch (err) {
       setSaveStatus("error");
-      setError("แก้ไขชื่อรูปไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "แก้ไขชื่อรูปไม่สำเร็จ");
     }
   }
 
   async function handleDelete(id: string) {
     if (!window.confirm("ต้องการลบรูปหลักฐานนี้ใช่หรือไม่?")) return;
+    setError(null);
     setSaveStatus("saving");
     try {
       const res = await fetch(`/api/photos/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("ลบรูปภาพไม่สำเร็จ");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "ลบรูปภาพไม่สำเร็จ");
       setPhotos((prev) => prev.filter((p) => p.id !== id));
       setSaveStatus("saved");
-    } catch {
+    } catch (err) {
       setSaveStatus("error");
-      setError("ลบรูปภาพไม่สำเร็จ");
+      setError(err instanceof Error ? err.message : "ลบรูปภาพไม่สำเร็จ");
     }
   }
 
@@ -184,7 +195,7 @@ export function PhotosManager({
 
           <form onSubmit={handleUpload} className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div
-              className="flex min-h-[180px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#DFD4C6] p-5 text-center"
+              className="flex min-h-[190px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#DFD4C6] p-5 text-center"
               style={{ background: "linear-gradient(135deg, #FFF9F2 0%, #F4FCF7 100%)" }}
             >
               {previewUrl ? (
@@ -215,19 +226,30 @@ export function PhotosManager({
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                     <circle cx="12" cy="13" r="4" />
                   </svg>
-                  <p className="mb-2 text-xs font-medium text-[#111111]">
-                    เปิดกล้องถ่ายรูป หรือเลือกไฟล์รูปภาพ (ไม่เกิน 5 MB)
+                  <p className="mb-3 text-xs font-medium text-[#111111]">
+                    รองรับ JPEG, PNG, WebP, GIF, HEIC (ไม่เกิน 4 MB)
                   </p>
-                  <label className="brand-gradient cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold text-white shadow-xs transition hover:opacity-95">
-                    เปิดกล้อง / เลือกรูปภาพ
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                  </label>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <label className="brand-gradient cursor-pointer rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition hover:opacity-95">
+                      ถ่ายรูปด้วยกล้อง
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                        capture="environment"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </label>
+                    <label className="bg-old-rose-soft border-old-rose-soft text-old-rose cursor-pointer rounded-xl border px-3.5 py-2 text-xs font-semibold transition hover:bg-[#FAE6EC]">
+                      เลือกจากแกลเลอรี
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </label>
+                  </div>
                 </>
               )}
             </div>
@@ -324,6 +346,13 @@ export function PhotosManager({
                           className="brand-gradient shrink-0 rounded-lg px-2.5 py-1 text-xs font-semibold text-white"
                         >
                           บันทึก
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(null)}
+                          className="shrink-0 text-xs text-[#555555] hover:underline"
+                        >
+                          ยกเลิก
                         </button>
                       </div>
                     ) : (

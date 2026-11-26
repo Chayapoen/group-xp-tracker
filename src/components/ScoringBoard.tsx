@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppHeader, type SaveStatus } from "@/components/AppHeader";
 import { NavTabs } from "@/components/NavTabs";
+import { createItemToggleQueue } from "@/lib/toggle-queue";
 import type { CategorySummary } from "@/lib/scoring";
 
 interface ScoringBoardProps {
@@ -29,7 +30,18 @@ export function ScoringBoard({
   const [historyCount, setHistoryCount] = useState(initialCounts.history);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const pendingCountRef = useRef(0);
+
+  const queueRef = useRef<ReturnType<typeof createItemToggleQueue> | null>(null);
+  if (!queueRef.current) {
+    queueRef.current = createItemToggleQueue();
+  }
+  const latestSeqByItemRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const queue = queueRef.current;
+    if (!queue) return;
+    return queue.subscribe((status) => setSaveStatus(status));
+  }, []);
 
   let totalXp = 0;
   let maxTotalXp = 0;
@@ -55,39 +67,38 @@ export function ScoringBoard({
     );
   }
 
-  async function handleToggle(catId: string, itemId: string, currentPassed: boolean) {
+  function handleToggle(catId: string, itemId: string, currentPassed: boolean) {
     const nextPassed = !currentPassed;
+    const seq = (latestSeqByItemRef.current.get(itemId) ?? 0) + 1;
+    latestSeqByItemRef.current.set(itemId, seq);
+
     setErrorMessage(null);
     applyToggleState(catId, itemId, nextPassed);
 
-    pendingCountRef.current += 1;
-    setSaveStatus("saving");
+    queueRef.current
+      ?.enqueue(itemId, async () => {
+        const res = await fetch("/api/scores/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId, passed: nextPassed }),
+        });
 
-    try {
-      const res = await fetch("/api/scores/toggle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId, passed: nextPassed }),
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "บันทึกคะแนนไม่สำเร็จ");
+        }
+
+        setHistoryCount((c) => c + 1);
+      })
+      .catch((err) => {
+        // Only roll back if no newer toggle superseded this request
+        if (latestSeqByItemRef.current.get(itemId) === seq) {
+          applyToggleState(catId, itemId, currentPassed);
+        }
+        setErrorMessage(
+          err instanceof Error ? err.message : "บันทึกคะแนนไม่สำเร็จ กรุณาลองใหม่"
+        );
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "บันทึกคะแนนไม่สำเร็จ");
-      }
-
-      setHistoryCount((c) => c + 1);
-      pendingCountRef.current = Math.max(0, pendingCountRef.current - 1);
-      if (pendingCountRef.current === 0) {
-        setSaveStatus("saved");
-      }
-    } catch (err) {
-      applyToggleState(catId, itemId, currentPassed);
-      pendingCountRef.current = Math.max(0, pendingCountRef.current - 1);
-      setSaveStatus("error");
-      setErrorMessage(
-        err instanceof Error ? err.message : "บันทึกคะแนนไม่สำเร็จ กรุณาลองใหม่"
-      );
-    }
   }
 
   return (

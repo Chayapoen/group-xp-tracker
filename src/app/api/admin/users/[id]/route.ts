@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { hashPassword, requireAdminSession } from "@/lib/auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
+const BUCKET_NAME = "evidence-photos";
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -76,12 +78,30 @@ export async function DELETE(
     return NextResponse.json({ error: "ไม่มีสิทธิ์เข้าถึง" }, { status: 401 });
   }
 
-  const { id } = await context.params;
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("temp_users").delete().eq("id", id);
+  try {
+    const { id } = await context.params;
+    const supabase = getSupabaseAdmin();
 
-  if (error) {
+    // Collect storage paths before cascading delete removes evidence_photos rows
+    const { data: userPhotos } = await supabase
+      .from("evidence_photos")
+      .select("storage_path")
+      .eq("user_id", id);
+
+    const { error } = await supabase.from("temp_users").delete().eq("id", id);
+    if (error) {
+      return NextResponse.json({ error: "ลบผู้ใช้ไม่สำเร็จ" }, { status: 500 });
+    }
+
+    const paths = (userPhotos ?? [])
+      .map((p) => p.storage_path)
+      .filter((p): p is string => Boolean(p));
+    if (paths.length > 0) {
+      await supabase.storage.from(BUCKET_NAME).remove(paths);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch {
     return NextResponse.json({ error: "ลบผู้ใช้ไม่สำเร็จ" }, { status: 500 });
   }
-  return NextResponse.json({ ok: true });
 }

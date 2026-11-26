@@ -65,7 +65,7 @@ export async function DELETE(
       return NextResponse.json({ error: "ไม่พบรูปภาพที่ต้องการลบ" }, { status: 404 });
     }
 
-    await supabase.storage.from(BUCKET_NAME).remove([photo.storage_path]);
+    // Delete DB row FIRST so a DB failure never leaves a broken gallery image
     const { error: deleteError } = await supabase
       .from("evidence_photos")
       .delete()
@@ -76,6 +76,7 @@ export async function DELETE(
       return NextResponse.json({ error: "ลบรูปภาพไม่สำเร็จ" }, { status: 500 });
     }
 
+    await supabase.storage.from(BUCKET_NAME).remove([photo.storage_path]);
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "ลบรูปภาพไม่สำเร็จ" }, { status: 500 });

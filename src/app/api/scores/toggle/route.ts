@@ -39,45 +39,25 @@ export async function POST(request: Request) {
       : item.score_categories;
     const categoryTitle = categoryObj?.title ?? "ไม่ระบุหมวดหมู่";
 
-    const now = new Date().toISOString();
-    const { error: upsertError } = await supabase
-      .from("user_scores")
-      .upsert(
-        {
-          user_id: session.userId,
-          item_id: item.id,
-          passed: body.passed,
-          updated_at: now,
-        },
-        { onConflict: "user_id,item_id" }
-      );
-
-    if (upsertError) {
-      return NextResponse.json({ error: "บันทึกคะแนนไม่สำเร็จ" }, { status: 500 });
-    }
-
-    const { error: historyError } = await supabase.from("score_history").insert({
-      user_id: session.userId,
-      item_id: item.id,
-      category_title: categoryTitle,
-      item_title: item.title,
-      xp: item.xp,
-      passed: body.passed,
-      changed_by: session.username,
+    const { error: rpcError } = await supabase.rpc("toggle_user_score", {
+      p_user_id: session.userId,
+      p_item_id: item.id,
+      p_passed: body.passed,
+      p_category_title: categoryTitle,
+      p_item_title: item.title,
+      p_xp: item.xp,
+      p_changed_by: session.username,
     });
 
-    if (historyError) {
-      return NextResponse.json(
-        { error: "บันทึกประวัติการให้คะแนนไม่สำเร็จ" },
-        { status: 500 }
-      );
+    if (rpcError) {
+      return NextResponse.json({ error: "บันทึกคะแนนไม่สำเร็จ" }, { status: 500 });
     }
 
     return NextResponse.json({
       ok: true,
       itemId: item.id,
       passed: body.passed,
-      updatedAt: now,
+      updatedAt: new Date().toISOString(),
     });
   } catch {
     return NextResponse.json({ error: "บันทึกคะแนนไม่สำเร็จ" }, { status: 500 });

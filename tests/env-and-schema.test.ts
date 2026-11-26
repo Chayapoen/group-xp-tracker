@@ -23,9 +23,9 @@ describe("Supabase Admin & Schema", () => {
     expect(() => getSupabaseAdmin()).toThrow(/NEXT_PUBLIC_SUPABASE_URL|SUPABASE_SERVICE_ROLE_KEY/);
   });
 
-  it("defines all 7 required tables and evidence-photos bucket in supabase/schema.sql", () => {
+  it("defines all 7 required tables with RLS enabled, toggle RPC, and evidence-photos bucket", () => {
     const schemaPath = path.resolve(process.cwd(), "supabase/schema.sql");
-    const sql = fs.readFileSync(schemaPath, "utf8");
+    const sql = fs.readFileSync(schemaPath, "utf8").toLowerCase();
     const requiredTables = [
       "app_settings",
       "temp_users",
@@ -37,7 +37,9 @@ describe("Supabase Admin & Schema", () => {
     ];
     for (const table of requiredTables) {
       expect(sql).toContain(`create table if not exists public.${table}`);
+      expect(sql).toContain(`alter table public.${table} enable row level security`);
     }
+    expect(sql).toContain("create or replace function public.toggle_user_score");
     expect(sql).toContain("evidence-photos");
   });
 });
