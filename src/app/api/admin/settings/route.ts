@@ -11,13 +11,14 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("app_settings")
-    .select("project_name, leaderboard_visible, updated_at")
+    .select("project_name, leaderboard_visible, project_icon_url, updated_at")
     .eq("id", 1)
     .maybeSingle();
 
   return NextResponse.json({
     projectName: data?.project_name || "ระบบจดคะแนน",
     leaderboardVisible: data?.leaderboard_visible !== false,
+    projectIconUrl: data?.project_icon_url ?? null,
     updatedAt: data?.updated_at ?? null,
   });
 }

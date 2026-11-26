@@ -8,6 +8,8 @@ create table if not exists public.app_settings (
   id integer primary key default 1 check (id = 1),
   project_name text not null default 'ระบบจดคะแนน',
   leaderboard_visible boolean not null default true,
+  project_icon_url text,
+  project_icon_path text,
   updated_at timestamptz not null default now()
 );
 
@@ -89,6 +91,8 @@ create index if not exists idx_evidence_photos_user_id_created on public.evidenc
 
 -- 7b. Idempotent column upgrades for existing databases
 alter table public.app_settings add column if not exists leaderboard_visible boolean not null default true;
+alter table public.app_settings add column if not exists project_icon_url text;
+alter table public.app_settings add column if not exists project_icon_path text;
 alter table public.score_categories add column if not exists is_open boolean not null default true;
 alter table public.evidence_photos add column if not exists issue_category text;
 

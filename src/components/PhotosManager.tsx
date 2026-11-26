@@ -14,6 +14,7 @@ export interface PhotoView {
 
 interface PhotosManagerProps {
   projectName: string;
+  projectIconUrl?: string | null;
   leaderboardVisible: boolean;
   user: {
     userId: string;
@@ -26,6 +27,7 @@ interface PhotosManagerProps {
 
 export function PhotosManager({
   projectName,
+  projectIconUrl,
   leaderboardVisible,
   user,
   initialPhotos,
@@ -179,6 +181,7 @@ export function PhotosManager({
     <div className="min-h-screen">
       <AppHeader
         projectName={projectName}
+        projectIconUrl={projectIconUrl}
         saveStatus={saveStatus}
         username={user.username}
         groupName={user.groupName}

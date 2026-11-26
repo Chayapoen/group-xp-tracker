@@ -8,6 +8,7 @@ import type { CategorySummary } from "@/lib/scoring";
 
 interface ScoringBoardProps {
   initialProjectName: string;
+  projectIconUrl?: string | null;
   leaderboardVisible: boolean;
   user: {
     userId: string;
@@ -23,6 +24,7 @@ interface ScoringBoardProps {
 
 export function ScoringBoard({
   initialProjectName,
+  projectIconUrl,
   leaderboardVisible,
   user,
   initialCategories,
@@ -113,6 +115,7 @@ export function ScoringBoard({
     <div className="min-h-screen">
       <AppHeader
         projectName={initialProjectName}
+        projectIconUrl={projectIconUrl}
         saveStatus={saveStatus}
         username={user.username}
         groupName={user.groupName}

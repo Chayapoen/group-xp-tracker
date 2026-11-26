@@ -16,6 +16,7 @@ export interface RankingRow {
 
 interface LeaderboardViewProps {
   projectName: string;
+  projectIconUrl?: string | null;
   user: {
     userId: string;
     username: string;
@@ -31,6 +32,7 @@ interface LeaderboardViewProps {
 
 export function LeaderboardView({
   projectName,
+  projectIconUrl,
   user,
   leaderboardVisible: initialVisible,
   initialRankings,
@@ -68,6 +70,7 @@ export function LeaderboardView({
     <div className="min-h-screen">
       <AppHeader
         projectName={projectName}
+        projectIconUrl={projectIconUrl}
         saveStatus="saved"
         username={user.username}
         groupName={user.groupName}

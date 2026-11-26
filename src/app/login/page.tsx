@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
   const [projectName, setProjectName] = useState("ระบบจดคะแนน");
+  const [projectIconUrl, setProjectIconUrl] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +18,7 @@ export default function LoginPage() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.projectName) setProjectName(data.projectName);
+        if (data?.projectIconUrl) setProjectIconUrl(data.projectIconUrl);
       })
       .catch(() => {});
   }, []);
@@ -50,9 +52,17 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm rounded-2xl border border-[#E6DDD2] bg-white/95 p-6 shadow-md space-y-5">
         <div className="text-center space-y-1.5">
-          <div className="brand-gradient mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-white text-lg font-extrabold shadow-xs">
-            XP
-          </div>
+          {projectIconUrl ? (
+            <img
+              src={projectIconUrl}
+              alt={projectName}
+              className="mx-auto h-14 w-14 rounded-2xl border border-[#E6DDD2] object-cover shadow-xs"
+            />
+          ) : (
+            <div className="brand-gradient mx-auto flex h-12 w-12 items-center justify-center rounded-2xl text-white text-lg font-extrabold shadow-xs">
+              XP
+            </div>
+          )}
           <h1 className="text-xl font-extrabold text-[#111111]">{projectName}</h1>
           <p className="text-xs text-[#555555]">
             เข้าสู่ระบบด้วย <span className="font-semibold text-old-rose">Username ชั่วคราว</span> ที่ผู้ดูแลกำหนดให้

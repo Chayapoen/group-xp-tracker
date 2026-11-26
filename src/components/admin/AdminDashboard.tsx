@@ -70,6 +70,7 @@ export function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("monitor");
   const [projectName, setProjectName] = useState("ระบบจดคะแนน");
+  const [projectIconUrl, setProjectIconUrl] = useState<string | null>(null);
   const [leaderboardVisible, setLeaderboardVisible] = useState(true);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [categories, setCategories] = useState<AdminCategoryItem[]>([]);
@@ -142,6 +143,7 @@ export function AdminDashboard() {
         };
 
         setProjectName(overviewData.projectName || "ระบบจดคะแนน");
+        setProjectIconUrl(overviewData.projectIconUrl ?? null);
         setLeaderboardVisible(overviewData.leaderboardVisible !== false);
         setLeaderboard(overviewData.leaderboard ?? []);
         setMonitorCategories(overviewData.monitorCategories ?? []);
@@ -227,6 +229,13 @@ export function AdminDashboard() {
       <header className="sticky top-0 z-30 border-b border-[#EAE1D7] bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
+            {projectIconUrl ? (
+              <img
+                src={projectIconUrl}
+                alt={projectName}
+                className="h-8 w-8 shrink-0 rounded-lg border border-[#E6DDD2] object-cover"
+              />
+            ) : null}
             <span className="brand-gradient rounded-lg px-2 py-1 text-xs font-bold text-white">
               ADMIN
             </span>
@@ -307,11 +316,13 @@ export function AdminDashboard() {
         ) : (
           <SettingsTab
             projectName={projectName}
+            projectIconUrl={projectIconUrl}
             leaderboardVisible={leaderboardVisible}
             onSaved={(s) => {
               setProjectName(s.projectName);
               setLeaderboardVisible(s.leaderboardVisible);
             }}
+            onIconChanged={setProjectIconUrl}
           />
         )}
       </main>

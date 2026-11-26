@@ -23,7 +23,7 @@ export default async function HistoryPage() {
   const [settingsRes, historyRes, photosCountRes] = await Promise.all([
     supabase
       .from("app_settings")
-      .select("project_name, leaderboard_visible")
+      .select("project_name, leaderboard_visible, project_icon_url")
       .eq("id", 1)
       .maybeSingle(),
     supabase
@@ -44,6 +44,7 @@ export default async function HistoryPage() {
     <div className="min-h-screen">
       <AppHeader
         projectName={settingsRes.data?.project_name || "ระบบจดคะแนน"}
+        projectIconUrl={settingsRes.data?.project_icon_url ?? null}
         saveStatus="saved"
         username={session.username}
         groupName={session.groupName}

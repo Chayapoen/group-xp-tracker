@@ -7,6 +7,7 @@ export type SaveStatus = "saved" | "saving" | "error";
 
 interface AppHeaderProps {
   projectName: string;
+  projectIconUrl?: string | null;
   saveStatus: SaveStatus;
   username: string;
   groupName: string;
@@ -30,6 +31,7 @@ function getUserAvatarInfo(username: string) {
 
 export function AppHeader({
   projectName,
+  projectIconUrl,
   saveStatus,
   username,
   groupName,
@@ -47,11 +49,19 @@ export function AppHeader({
   return (
     <header className="sticky top-0 z-30 border-b border-[#EAE1D7] bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
-        {/* Top-Left: Project Name */}
+        {/* Top-Left: Project Icon + Name */}
         <div className="flex min-w-0 items-center gap-2">
-          <div className="brand-gradient flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-xs">
-            XP
-          </div>
+          {projectIconUrl ? (
+            <img
+              src={projectIconUrl}
+              alt={projectName}
+              className="h-8 w-8 shrink-0 rounded-lg border border-[#E6DDD2] object-cover shadow-2xs"
+            />
+          ) : (
+            <div className="brand-gradient flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white shadow-xs">
+              XP
+            </div>
+          )}
           <span className="truncate text-sm font-bold text-[#111111]">
             {projectName}
           </span>

@@ -20,7 +20,7 @@ export default async function LeaderboardPage() {
   const [settingsRes, photosCountRes, historyCountRes] = await Promise.all([
     supabase
       .from("app_settings")
-      .select("project_name, leaderboard_visible")
+      .select("project_name, leaderboard_visible, project_icon_url")
       .eq("id", 1)
       .maybeSingle(),
     supabase
@@ -34,6 +34,7 @@ export default async function LeaderboardPage() {
   ]);
 
   const projectName = settingsRes.data?.project_name || "ระบบจดคะแนน";
+  const projectIconUrl = settingsRes.data?.project_icon_url ?? null;
   const leaderboardVisible = settingsRes.data?.leaderboard_visible !== false;
 
   let rankings: RankingRow[] = [];
@@ -97,6 +98,7 @@ export default async function LeaderboardPage() {
   return (
     <LeaderboardView
       projectName={projectName}
+      projectIconUrl={projectIconUrl}
       user={session}
       leaderboardVisible={leaderboardVisible}
       initialRankings={rankings}

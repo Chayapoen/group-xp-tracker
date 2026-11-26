@@ -15,7 +15,7 @@ export async function GET() {
       await Promise.all([
         supabase
           .from("app_settings")
-          .select("project_name, leaderboard_visible")
+          .select("project_name, leaderboard_visible, project_icon_url")
           .eq("id", 1)
           .maybeSingle(),
         supabase
@@ -187,6 +187,7 @@ export async function GET() {
     return NextResponse.json({
       projectName: settingsRes.data?.project_name || "ระบบจดคะแนน",
       leaderboardVisible: settingsRes.data?.leaderboard_visible !== false,
+      projectIconUrl: settingsRes.data?.project_icon_url ?? null,
       leaderboard,
       monitorCategories,
       history: historyWithGroup,

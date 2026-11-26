@@ -68,7 +68,13 @@ const ALLOWED_TABLES: Record<string, TableMeta> = {
     deletable: true,
   },
   app_settings: {
-    columns: ["id", "project_name", "leaderboard_visible", "updated_at"],
+    columns: [
+      "id",
+      "project_name",
+      "leaderboard_visible",
+      "project_icon_url",
+      "updated_at",
+    ],
     orderBy: "id",
     ascending: true,
     deletable: false,

@@ -17,7 +17,7 @@ export default async function HomePage() {
     await Promise.all([
       supabase
         .from("app_settings")
-        .select("project_name, leaderboard_visible")
+        .select("project_name, leaderboard_visible, project_icon_url")
         .eq("id", 1)
         .maybeSingle(),
       supabase.from("score_categories").select("id, title, sort_order, is_open, created_at").order("sort_order"),
@@ -42,6 +42,7 @@ export default async function HomePage() {
   return (
     <ScoringBoard
       initialProjectName={settingsRes.data?.project_name || "ระบบจดคะแนน"}
+      projectIconUrl={settingsRes.data?.project_icon_url ?? null}
       leaderboardVisible={settingsRes.data?.leaderboard_visible !== false}
       user={session}
       initialCategories={categories}
